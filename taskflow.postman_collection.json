@@ -1,0 +1,604 @@
+{
+  "info": {
+    "name": "TaskFlow API",
+    "description": "Complete API collection for TaskFlow task management system.\n\nUsage: Run requests top-to-bottom. Register/Login auto-set the token. Create Project/Task auto-set IDs for subsequent requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8080" },
+    { "key": "token", "value": "" },
+    { "key": "project_id", "value": "" },
+    { "key": "task_id", "value": "" },
+    { "key": "user_id", "value": "" },
+    { "key": "assignee_id", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/register" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice\",\n  \"email\": \"alice@example.com\",\n  \"password\": \"securepass123\"\n}"
+            },
+            "auth": { "type": "noauth" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  var data = pm.response.json();",
+                  "  pm.collectionVariables.set('token', data.token);",
+                  "  pm.collectionVariables.set('user_id', data.user.id);",
+                  "  pm.test('Token received', () => pm.expect(data.token).to.be.a('string'));",
+                  "  pm.test('User returned', () => pm.expect(data.user.email).to.eql('alice@example.com'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register — duplicate email (400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/register" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice Again\",\n  \"email\": \"alice@example.com\",\n  \"password\": \"securepass123\"\n}"
+            },
+            "auth": { "type": "noauth" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Duplicate returns 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Email field error', () => {",
+                  "  pm.expect(pm.response.json().fields.email).to.eql('already registered');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register — validation errors (400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/register" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"email\": \"bad\",\n  \"password\": \"short\"\n}"
+            },
+            "auth": { "type": "noauth" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Validation returns 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Has field errors', () => pm.expect(pm.response.json().fields).to.be.an('object'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/login" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"securepass123\"\n}"
+            },
+            "auth": { "type": "noauth" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var data = pm.response.json();",
+                  "  pm.collectionVariables.set('token', data.token);",
+                  "  pm.collectionVariables.set('user_id', data.user.id);",
+                  "  pm.test('Token received', () => pm.expect(data.token).to.be.a('string'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login — wrong password (401)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/login" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"wrongpassword\"\n}"
+            },
+            "auth": { "type": "noauth" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Wrong password returns 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login — seed user (test@example.com)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/login" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "auth": { "type": "noauth" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var data = pm.response.json();",
+                  "  pm.collectionVariables.set('token', data.token);",
+                  "  pm.collectionVariables.set('user_id', data.user.id);",
+                  "  pm.test('Seed user login works', () => pm.expect(data.user.email).to.eql('test@example.com'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Projects",
+      "item": [
+        {
+          "name": "Create project",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/projects" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Q3 Product Launch\",\n  \"description\": \"Ship the new dashboard by end of quarter\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  var data = pm.response.json();",
+                  "  pm.collectionVariables.set('project_id', data.id);",
+                  "  pm.test('Project created', () => pm.expect(data.name).to.eql('Q3 Product Launch'));",
+                  "  pm.test('Owner is current user', () => {",
+                  "    pm.expect(data.owner_id).to.eql(pm.collectionVariables.get('user_id'));",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List projects",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/projects?page=1&limit=20" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has projects array', () => pm.expect(pm.response.json().projects).to.be.an('array'));",
+                  "pm.test('Has pagination meta', () => {",
+                  "  var meta = pm.response.json().meta;",
+                  "  pm.expect(meta).to.have.property('page');",
+                  "  pm.expect(meta).to.have.property('total_items');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get project detail",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/projects/{{project_id}}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has tasks array', () => pm.expect(pm.response.json().tasks).to.be.an('array'));",
+                  "pm.test('Has project fields', () => {",
+                  "  var data = pm.response.json();",
+                  "  pm.expect(data).to.have.property('name');",
+                  "  pm.expect(data).to.have.property('owner_id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Patch project",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/projects/{{project_id}}" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Q3 Launch (Updated)\",\n  \"description\": null\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Name updated', () => pm.expect(pm.response.json().name).to.eql('Q3 Launch (Updated)'));",
+                  "pm.test('Description cleared', () => pm.expect(pm.response.json().description).to.be.null);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get project stats",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/projects/{{project_id}}/stats" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has by_status', () => pm.expect(pm.response.json().by_status).to.be.an('object'));",
+                  "pm.test('Has by_assignee', () => pm.expect(pm.response.json().by_assignee).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get project members",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/projects/{{project_id}}/members" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has members array', () => pm.expect(pm.response.json().members).to.be.an('array'));",
+                  "pm.test('Members have name and email', () => {",
+                  "  var m = pm.response.json().members[0];",
+                  "  pm.expect(m).to.have.property('name');",
+                  "  pm.expect(m).to.have.property('email');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get nonexistent project (404)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/projects/00000000-0000-0000-0000-000000000000" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error body', () => pm.expect(pm.response.json().error).to.eql('not found'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "Create task",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/projects/{{project_id}}/tasks" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Write API documentation\",\n  \"description\": \"Cover all endpoints with examples\",\n  \"priority\": \"high\",\n  \"due_date\": \"2025-06-30\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  var data = pm.response.json();",
+                  "  pm.collectionVariables.set('task_id', data.id);",
+                  "  pm.test('Task created', () => pm.expect(data.title).to.eql('Write API documentation'));",
+                  "  pm.test('Default status is todo', () => pm.expect(data.status).to.eql('todo'));",
+                  "  pm.test('Priority set', () => pm.expect(data.priority).to.eql('high'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create task with assignee",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/projects/{{project_id}}/tasks" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Review pull request\",\n  \"priority\": \"medium\",\n  \"assignee_id\": \"{{user_id}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  var data = pm.response.json();",
+                  "  pm.test('Task assigned', () => {",
+                  "    pm.expect(data.assignee_id).to.eql(pm.collectionVariables.get('user_id'));",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create task — invalid priority (400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/projects/{{project_id}}/tasks" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Bad task\",\n  \"priority\": \"urgent\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Invalid priority returns 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Priority field error', () => {",
+                  "  pm.expect(pm.response.json().fields.priority).to.eql('is invalid');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List tasks",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/projects/{{project_id}}/tasks?page=1&limit=20" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has tasks array', () => pm.expect(pm.response.json().tasks).to.be.an('array'));",
+                  "pm.test('Has pagination meta', () => pm.expect(pm.response.json().meta).to.have.property('total_items'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List tasks — filter by status",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/projects/{{project_id}}/tasks?status=todo" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('All tasks are todo', () => {",
+                  "  pm.response.json().tasks.forEach(t => pm.expect(t.status).to.eql('todo'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List tasks — filter by assignee",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/projects/{{project_id}}/tasks?assignee={{user_id}}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('All tasks belong to assignee', () => {",
+                  "  pm.response.json().tasks.forEach(t => {",
+                  "    pm.expect(t.assignee_id).to.eql(pm.collectionVariables.get('user_id'));",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Patch task — update status",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/tasks/{{task_id}}" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status updated', () => pm.expect(pm.response.json().status).to.eql('in_progress'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Patch task — clear description with null",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/tasks/{{task_id}}" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": null\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Description cleared', () => pm.expect(pm.response.json().description).to.be.null);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Patch task — invalid status (400)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/tasks/{{task_id}}" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"cancelled\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Invalid status returns 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Status field error', () => {",
+                  "  pm.expect(pm.response.json().fields.status).to.eql('is invalid');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete task",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/tasks/{{task_id}}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cleanup",
+      "item": [
+        {
+          "name": "Delete project",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/projects/{{project_id}}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
