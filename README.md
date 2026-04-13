@@ -121,7 +121,8 @@ If a user has no access to a project, all endpoints return 404 rather than 403. 
 
 ```bash
 git clone <repo-url> && cd <repo-dir>
-cp .env.example .env          # defaults work out of the box
+cp .env.example .env
+# Optional: replace JWT_SECRET with a real secret (openssl rand -base64 48)
 docker compose up --build      # starts PostgreSQL + API
 ```
 
